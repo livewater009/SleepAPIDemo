@@ -1,26 +1,29 @@
 package com.androidphotoapp.sleepapidemo
 
+import android.os.Build
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.Button
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
 import com.androidphotoapp.sleepapidemo.ui.theme.SleepAPIDemoTheme
+import java.text.SimpleDateFormat
+import java.util.*
 
 class MainActivity : ComponentActivity() {
 
     private lateinit var sleepManager: SleepRequestManager
     private var logging by mutableStateOf(false)
+    private val sleepLogs = mutableStateListOf<String>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -30,65 +33,172 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             SleepAPIDemoTheme {
-                MainScreen(logging = logging,
-                    onToggleLogging = { toggleLogging() })
+                MainScreenProfessional(
+                    logging = logging,
+                    sleepLogs = sleepLogs,
+                    onToggleLogging = { toggleLogging() },
+                    onSendMockData = { sendMockSleep() }
+                )
             }
         }
     }
 
     private fun toggleLogging() {
+        val currentTime = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
         try {
             if (logging) {
                 sleepManager.unsubscribeFromSleepUpdates()
+                sleepLogs.add("[${currentTime}] Stopped Sleep Updates")
             } else {
                 sleepManager.subscribeToSleepUpdates()
+                sleepLogs.add("[${currentTime}] Started Sleep Updates")
             }
             logging = !logging
         } catch (e: SecurityException) {
-            Toast.makeText(
+            android.widget.Toast.makeText(
                 this,
                 "Missing ACTIVITY_RECOGNITION permission",
-                Toast.LENGTH_LONG
+                android.widget.Toast.LENGTH_LONG
             ).show()
         }
     }
+
+    private fun sendMockSleep() {
+        val currentTime = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
+        // Simulate sleep events
+        val mockLogs = listOf(
+            "[${currentTime}] Logging SleepSegmentEvents",
+            "[${currentTime}] 00:30 to 00:60 with status IN_BED",
+            "[${currentTime}] 00:60 to 01:00 with status ASLEEP",
+            "[${currentTime}] Logging SleepClassifyEvents",
+            "[${currentTime}] Confidence: 90 - Light: 0 - Motion: 0",
+            "[${currentTime}] Confidence: 70 - Light: 1 - Motion: 1"
+        )
+        sleepLogs.addAll(mockLogs)
+    }
 }
 
+// ---------------------------
+// Helper function to detect emulator
+// ---------------------------
+fun isEmulator(): Boolean {
+    val fingerprint = Build.FINGERPRINT.lowercase()
+    val model = Build.MODEL.lowercase()
+    val manufacturer = Build.MANUFACTURER.lowercase()
+    val brand = Build.BRAND.lowercase()
+    val device = Build.DEVICE.lowercase()
+    val product = Build.PRODUCT.lowercase()
+
+    return fingerprint.contains("generic") ||
+            fingerprint.contains("emulator") ||
+            model.contains("emulator") ||
+            model.contains("sdk") ||
+            manufacturer.contains("genymotion") ||
+            brand.startsWith("generic") ||
+            device.startsWith("generic") ||
+            product.contains("sdk") ||
+            product.contains("google_sdk") ||
+            product.contains("emulator") ||
+            product.contains("simulator")
+}
+
+// ---------------------------
+// Composable Professional UI
+// ---------------------------
 @Composable
-fun MainScreen(logging: Boolean, onToggleLogging: () -> Unit) {
+fun MainScreenProfessional(
+    logging: Boolean,
+    sleepLogs: List<String>,
+    onToggleLogging: () -> Unit,
+    onSendMockData: () -> Unit
+) {
     Scaffold(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(Color(0xFFF5F5F5))
     ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(16.dp)
-                .padding(innerPadding),
-            verticalArrangement = Arrangement.Top
+                .padding(innerPadding)
         ) {
-            Button(
-                onClick = { onToggleLogging() },
-                modifier = Modifier.fillMaxWidth()
+            Text(
+                text = "Sleep Tracker",
+                style = MaterialTheme.typography.headlineMedium
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Buttons Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(if (logging) "Stop Logging" else "Start Logging")
+                Button(
+                    onClick = { onToggleLogging() },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(if (logging) "Stop Updates" else "Start Updates")
+                }
+
+                if (isEmulator()) {
+                    Button(
+                        onClick = { onSendMockData() },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6200EE))
+                    ) {
+                        Text("Send Mock", color = Color.White)
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = if (logging) "Logging sleep updates..." else "Not logging",
-                color = Color.Black
+                text = "Sleep Logs",
+                style = MaterialTheme.typography.titleMedium
             )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                items(sleepLogs) { log ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.medium,
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .background(Color.White)
+                                .padding(12.dp)
+                        ) {
+                            Text(text = log)
+                        }
+                    }
+                }
+            }
         }
     }
 }
 
 @Preview(showBackground = true)
 @Composable
-fun MainScreenPreview() {
+fun MainScreenPreviewProfessional() {
     SleepAPIDemoTheme {
-        MainScreen(logging = false, onToggleLogging = {})
+        MainScreenProfessional(
+            logging = false,
+            sleepLogs = listOf(
+                "[12:30:00] Started Sleep Updates",
+                "[12:35:00] Logging SleepSegmentEvents",
+                "[12:36:00] Confidence: 90 - Light: 0 - Motion: 0"
+            ),
+            onToggleLogging = {},
+            onSendMockData = {}
+        )
     }
 }
