@@ -1,5 +1,6 @@
 package com.androidphotoapp.sleepapidemo.receiver
 
+import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -15,26 +16,53 @@ class SleepServiceReceiver : BroadcastReceiver() {
         if (intent == null) return // ignore null intent
         val logs = mutableListOf<String>()
 
+        // ---- SleepSegmentEvent ----
         if (SleepSegmentEvent.hasEvents(intent)) {
             val events = SleepSegmentEvent.extractEvents(intent)
-            logs.add("Logging SleepSegmentEvents")
-            for (event in events) {
-                val startSeconds = event.startTimeMillis / 1000 % 60
-                val endSeconds = event.endTimeMillis / 1000 % 60
-                logs.add("$startSeconds to $endSeconds with status ${event.status}")
+                .filter { it.status != SleepSegmentEvent.STATUS_NOT_DETECTED }
+
+            if (events.isNotEmpty()) {
+                logs.add("Sleep Segments:")
+
+                // Log each segment
+                for (event in events) {
+                    val startTime = millisToTimeString(event.startTimeMillis)
+                    val endTime = millisToTimeString(event.endTimeMillis)
+                    val statusString = when (event.status) {
+                        SleepSegmentEvent.STATUS_SUCCESSFUL -> "In Bed"
+                        SleepSegmentEvent.STATUS_MISSING_DATA -> "Partial Sleep Data"
+                        else -> "Unknown"
+                    }
+                    logs.add("$startTime to $endTime: $statusString")
+                }
+
+                // Sleep start and wake-up time
+                val sleepStart = millisToTimeString(events.minOf { it.startTimeMillis })
+                val wakeUpTime = millisToTimeString(events.maxOf { it.endTimeMillis })
+                logs.add("Sleep Start: $sleepStart")
+                logs.add("Wake Up Time: $wakeUpTime")
             }
         }
 
+        // ---- SleepClassifyEvent ----
         if (SleepClassifyEvent.hasEvents(intent)) {
-            val events = SleepClassifyEvent.extractEvents(intent)
-            logs.add("Logging SleepClassifyEvents")
-            for (event in events) {
+            val classifyEvents = SleepClassifyEvent.extractEvents(intent)
+            logs.add("Sleep Classify Events:")
+            for (event in classifyEvents) {
                 logs.add("Confidence: ${event.confidence} - Light: ${event.light} - Motion: ${event.motion}")
             }
         }
 
         // Update repository
         SleepDataRepository.addLogs(logs)
+    }
+
+    @SuppressLint("DefaultLocale")
+    private fun millisToTimeString(timeMillis: Long): String {
+        val calendar = java.util.Calendar.getInstance().apply { timeInMillis = timeMillis }
+        val hour = calendar.get(java.util.Calendar.HOUR_OF_DAY)
+        val minute = calendar.get(java.util.Calendar.MINUTE)
+        return String.format("%02d:%02d", hour, minute)
     }
 
     companion object {
