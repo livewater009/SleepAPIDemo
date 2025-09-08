@@ -53,7 +53,6 @@ androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-co
 
 # Room
 room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 
 # Google Play Services Location
 play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "playservices" }

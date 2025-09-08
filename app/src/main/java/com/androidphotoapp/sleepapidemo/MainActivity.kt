@@ -1,10 +1,14 @@
 package com.androidphotoapp.sleepapidemo
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -15,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.core.app.ActivityCompat
 import com.androidphotoapp.sleepapidemo.ui.theme.SleepAPIDemoTheme
 import java.text.SimpleDateFormat
 import java.util.*
@@ -43,23 +48,53 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun toggleLogging() {
-        val currentTime = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
-        try {
-            if (logging) {
-                sleepManager.unsubscribeFromSleepUpdates()
-                sleepLogs.add("[${currentTime}] Stopped Sleep Updates")
-            } else {
-                sleepManager.subscribeToSleepUpdates()
-                sleepLogs.add("[${currentTime}] Started Sleep Updates")
-            }
-            logging = !logging
-        } catch (e: SecurityException) {
+    // TODO: Review Activity Recognition permission checking.
+    @RequiresApi(Build.VERSION_CODES.Q)
+    private fun activityRecognitionPermissionApproved(): Boolean {
+        return PackageManager.PERMISSION_GRANTED == ActivityCompat.checkSelfPermission(
+            this,
+            Manifest.permission.ACTIVITY_RECOGNITION
+        );
+    }
+
+    // ✅ Permission launcher
+    @RequiresApi(Build.VERSION_CODES.Q)
+    private val requestPermissionLauncher =  registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+        if (isGranted) {
+            // User granted permission, now you can toggle logging again
+            toggleLogging()
+        } else {
             android.widget.Toast.makeText(
                 this,
-                "Missing ACTIVITY_RECOGNITION permission",
+                "ACTIVITY_RECOGNITION permission denied",
                 android.widget.Toast.LENGTH_LONG
             ).show()
+        }
+    }
+
+
+    @RequiresApi(Build.VERSION_CODES.Q)
+    private fun toggleLogging() {
+        if (activityRecognitionPermissionApproved()) {
+            val currentTime = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
+            try {
+                if (logging) {
+                    sleepManager.unsubscribeFromSleepUpdates()
+                    sleepLogs.add("[${currentTime}] Stopped Sleep Updates")
+                } else {
+                    sleepManager.subscribeToSleepUpdates()
+                    sleepLogs.add("[${currentTime}] Started Sleep Updates")
+                }
+                logging = !logging
+            } catch (e: SecurityException) {
+                android.widget.Toast.makeText(
+                    this,
+                    "Missing ACTIVITY_RECOGNITION permission",
+                    android.widget.Toast.LENGTH_LONG
+                ).show()
+            }
+        } else {
+            requestPermissionLauncher.launch(Manifest.permission.ACTIVITY_RECOGNITION)
         }
     }
 
