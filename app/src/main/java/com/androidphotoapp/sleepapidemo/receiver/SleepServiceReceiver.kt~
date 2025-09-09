@@ -6,6 +6,8 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.util.Log
+import android.widget.Toast
 import com.google.android.gms.location.SleepClassifyEvent
 import com.google.android.gms.location.SleepSegmentEvent
 import com.androidphotoapp.sleepapidemo.SleepDataRepository
@@ -13,6 +15,7 @@ import com.androidphotoapp.sleepapidemo.SleepDataRepository
 class SleepServiceReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context?, intent: Intent?) {
+        Log.d("SleepServiceReceiver", "Get Data!!!")
         if (intent == null) return // ignore null intent
 
         // --- Simulated test event ---
@@ -21,7 +24,7 @@ class SleepServiceReceiver : BroadcastReceiver() {
             Toast.makeText(context, "Simulated sleep event received!", Toast.LENGTH_SHORT).show()
             return
         }
-        
+
         val logs = mutableListOf<String>()
 
         // ---- SleepSegmentEvent ----
