@@ -152,6 +152,8 @@ fun MainScreenProfessional(
     onToggleLogging: () -> Unit,
     onSendMockData: () -> Unit
 ) {
+    val listState = rememberLazyListState() // Keep track of scroll state
+
     Scaffold(
         modifier = Modifier
             .fillMaxSize()
@@ -202,9 +204,15 @@ fun MainScreenProfessional(
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            // LazyColumn for logs with auto-scroll
             LazyColumn(
+                state = listState,
                 verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f) // Make it take all remaining space
+                    .background(Color(0xFFEFEFEF))
+                    .padding(8.dp)
             ) {
                 items(sleepLogs) { log ->
                     Card(
@@ -220,6 +228,13 @@ fun MainScreenProfessional(
                             Text(text = log)
                         }
                     }
+                }
+            }
+
+            // Auto scroll to bottom when logs change
+            LaunchedEffect(sleepLogs.size) {
+                if (sleepLogs.isNotEmpty()) {
+                    listState.animateScrollToItem(sleepLogs.size - 1)
                 }
             }
         }
