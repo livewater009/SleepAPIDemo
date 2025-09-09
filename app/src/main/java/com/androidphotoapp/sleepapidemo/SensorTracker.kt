@@ -6,6 +6,7 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.util.Log
+import kotlin.math.sqrt
 
 object SensorTracker {
 
@@ -36,7 +37,7 @@ object SensorTracker {
           val x = event.values[0]
           val y = event.values[1]
           val z = event.values[2]
-          avgSensorMovement = Math.sqrt((x * x + y * y + z * z).toDouble()).toFloat()
+          avgSensorMovement = sqrt((x * x + y * y + z * z).toDouble()).toFloat()
         }
         Sensor.TYPE_LIGHT -> {
           currentLight = event.values[0]
