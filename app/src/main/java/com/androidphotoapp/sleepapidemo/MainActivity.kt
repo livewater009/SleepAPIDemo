@@ -30,6 +30,7 @@ class MainActivity : ComponentActivity() {
     private var logging by mutableStateOf(false)
     private val sleepLogs = mutableStateListOf<String>()
 
+    @RequiresApi(Build.VERSION_CODES.Q)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -79,9 +80,14 @@ class MainActivity : ComponentActivity() {
             try {
                 if (logging) {
                     sleepManager.unsubscribeFromSleepUpdates()
+                    SensorTracker.stop()
                     sleepLogs.add("[${currentTime}] Stopped Sleep Updates")
                 } else {
                     sleepManager.subscribeToSleepUpdates()
+                    SensorTracker.start(this) { log ->
+                        SleepDataRepository.addLogs(listOf(log))
+                        sleepLogs.add(log)
+                    }
                     sleepLogs.add("[${currentTime}] Started Sleep Updates")
                 }
                 logging = !logging

@@ -12,4 +12,12 @@ object SleepDataRepository {
     fun addLogs(logs: List<String>) {
         _sleepLogs.value = logs
     }
+
+    fun addStatusLog(status: String) {
+        val sdf = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+        val time = sdf.format(Date())
+        val updatedLogs = _sleepLogs.value.toMutableList()
+        updatedLogs.add("$status - $time")
+        _sleepLogs.value = updatedLogs
+    }
 }

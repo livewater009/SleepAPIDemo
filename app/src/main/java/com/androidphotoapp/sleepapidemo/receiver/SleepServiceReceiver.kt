@@ -15,8 +15,6 @@ import com.androidphotoapp.sleepapidemo.SleepDataRepository
 class SleepServiceReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context?, intent: Intent?) {
-        Log.d("SleepServiceReceiver", "Get Data!!!")
-        
         if (intent == null) return // ignore null intent
 
         // --- Simulated test event ---

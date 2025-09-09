@@ -1,0 +1,123 @@
+package com.androidphotoapp.sleepapidemo
+
+import android.Manifest
+import android.content.Context
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
+import android.util.Log
+import android.widget.Toast
+import androidx.annotation.RequiresPermission
+import com.androidphotoapp.sleepapidemo.receiver.SleepServiceReceiver
+import com.google.android.gms.location.ActivityRecognition
+import com.google.android.gms.location.SleepSegmentRequest
+import kotlin.math.sqrt
+
+class SleepRequestManager(private val context: Context) {
+
+    private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+
+    // Latest sensor values
+    var avgSensorMovement = 0f
+    var currentLight = 0f
+
+    // Sensor listener
+    private val sensorListener = object : SensorEventListener {
+        override fun onSensorChanged(event: SensorEvent) {
+            when (event.sensor.type) {
+                Sensor.TYPE_ACCELEROMETER -> {
+                    val x = event.values[0]
+                    val y = event.values[1]
+                    val z = event.values[2]
+                    avgSensorMovement = sqrt((x * x + y * y + z * z).toDouble()).toFloat()
+                    Log.d("SensorData", "Accelerometer avg=$avgSensorMovement")
+                }
+                Sensor.TYPE_GYROSCOPE -> {
+                    val x = event.values[0]
+                    val y = event.values[1]
+                    val z = event.values[2]
+                    Log.d("SensorData", "Gyroscope: x=$x y=$y z=$z")
+                }
+                Sensor.TYPE_LIGHT -> {
+                    currentLight = event.values[0]
+                    Log.d("SensorData", "Light sensor: $currentLight lux")
+                }
+            }
+        }
+
+        override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+    }
+
+    // Start sensor tracking
+    fun startSensorTracking() {
+        sensorManager.registerListener(
+            sensorListener,
+            sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER),
+            SensorManager.SENSOR_DELAY_NORMAL
+        )
+        sensorManager.registerListener(
+            sensorListener,
+            sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE),
+            SensorManager.SENSOR_DELAY_NORMAL
+        )
+        sensorManager.registerListener(
+            sensorListener,
+            sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT),
+            SensorManager.SENSOR_DELAY_NORMAL
+        )
+        Log.d("SensorTracking", "Sensor tracking started")
+    }
+
+    // Stop sensor tracking
+    fun stopSensorTracking() {
+        sensorManager.unregisterListener(sensorListener)
+        Log.d("SensorTracking", "Sensor tracking stopped")
+    }
+
+    fun isSensorAvailable(sensorType: Int): Boolean {
+        val sensor = sensorManager.getDefaultSensor(sensorType)
+        return sensor != null
+    }
+
+    @RequiresPermission(Manifest.permission.ACTIVITY_RECOGNITION)
+    fun subscribeToSleepUpdates() {
+        val accelerometerAvailable = isSensorAvailable(Sensor.TYPE_ACCELEROMETER)
+        val gyroscopeAvailable = isSensorAvailable(Sensor.TYPE_GYROSCOPE)
+        val lightSensorAvailable = isSensorAvailable(Sensor.TYPE_LIGHT)
+
+        Log.d("SensorCheck", "Accelerometer: $accelerometerAvailable")
+        Log.d("SensorCheck", "Gyroscope: $gyroscopeAvailable")
+        Log.d("SensorCheck", "Light: $lightSensorAvailable")
+
+        // Start sensors for near-real-time tracking
+        startSensorTracking()
+
+        // Request Sleep API updates (SleepSegmentEvent)
+        val task = ActivityRecognition.getClient(context)
+            .requestSleepSegmentUpdates(
+                SleepServiceReceiver.createPendingIntent(context),
+                SleepSegmentRequest.getDefaultSleepSegmentRequest()
+            )
+        task.addOnSuccessListener {
+            Toast.makeText(context, "Successfully subscribed to sleep data.", Toast.LENGTH_SHORT).show()
+        }
+        task.addOnFailureListener { exception ->
+            Toast.makeText(context, "Exception when subscribing to sleep data: $exception", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun unsubscribeFromSleepUpdates() {
+        ActivityRecognition.getClient(context)
+            .removeSleepSegmentUpdates(SleepServiceReceiver.createPendingIntent(context))
+        stopSensorTracking()
+        Toast.makeText(context, "Unsubscribed from sleep updates", Toast.LENGTH_SHORT).show()
+    }
+
+    // Optional: Combine sensor + SleepClassifyEvent to detect sleep
+    fun isNearRealTimeSleeping(motion: Int, confidence: Int): Boolean {
+        // motion: 0 = no motion, 1 = light, 2 = active
+        // confidence: 0–3 from SleepClassifyEvent
+        return motion == 0 && confidence >= 2 && currentLight < 10 && avgSensorMovement < 0.05f
+    }
+}
