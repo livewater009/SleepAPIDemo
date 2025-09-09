@@ -33,11 +33,7 @@
         <receiver
             android:name=".receiver.SleepServiceReceiver"
             android:enabled="true"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="com.androidphotoapp.sleepapidemo.SIMULATE_SLEEP"/>
-            </intent-filter>
-        </receiver>
+            android:exported="true" />
 
         <receiver
             android:name=".receiver.BootReceiver"
