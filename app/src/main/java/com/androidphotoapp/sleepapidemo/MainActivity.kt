@@ -211,8 +211,7 @@ fun MainScreenProfessional(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f) // Make it take all remaining space
-                    .background(Color(0xFFEFEFEF))
+                    .weight(1f)
                     .padding(8.dp)
             ) {
                 items(sleepLogs) { log ->

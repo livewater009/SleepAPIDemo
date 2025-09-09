@@ -49,6 +49,7 @@ object SensorTracker {
         }
       }
       detectSleepState()
+      logSensors()
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
@@ -82,5 +83,10 @@ object SensorTracker {
       isSleeping = sleepingNow
       logCallback?.invoke("SensorTracker → User is now ${if (isSleeping) "Sleeping" else "Awake"}")
     }
+  }
+
+  private fun logSensors() {
+    val log = "SensorTracker → Motion: $avgSensorMovement, Light: $currentLight, Gyro: x=$gyroX y=$gyroY z=$gyroZ"
+    logCallback?.invoke(log)
   }
 }
